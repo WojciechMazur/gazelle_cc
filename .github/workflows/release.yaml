@@ -37,6 +37,7 @@ jobs:
   publish-to-bcr:
     needs: release
     uses: ./.github/workflows/publish-to-bcr.yaml
+    if: false
     with:
       tag_name: ${{ inputs.tag_name || github.ref_name }}
     secrets:

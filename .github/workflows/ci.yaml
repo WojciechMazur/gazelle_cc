@@ -12,7 +12,9 @@ concurrency:
       
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    matrix: 
+      - os: [ubuntu-24.04, windows-2025]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +38,9 @@ jobs:
       run: bazel test --test_output=errors //index:integration_tests
           
   test-e2e:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    matrix: 
+      - os: [ubuntu-24.04, windows-2025]
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4  

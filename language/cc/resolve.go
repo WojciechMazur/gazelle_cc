@@ -30,9 +30,23 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/rule"
 )
 
+const embededHeaderDependenciesKey = "_cc_embeded_deps"
+
 // resolve.Resolver methods
-func (c *ccLanguage) Name() string                                        { return languageName }
-func (c *ccLanguage) Embeds(r *rule.Rule, from label.Label) []label.Label { return nil }
+func (c *ccLanguage) Name() string { return languageName }
+
+func (c *ccLanguage) Embeds(r *rule.Rule, from label.Label) []label.Label {
+	if len(c.headerEmbedingConfigs) == 0 {
+		return nil
+	}
+
+	embedableHdrTargets := c.resolveEmbedableHeaders(from, r.AttrStrings("srcs"))
+
+	// Allows to reference it during imports
+	r.SetPrivateAttr(embededHeaderDependenciesKey, embedableHdrTargets)
+
+	return embedableHdrTargets
+}
 
 func (*ccLanguage) Imports(c *config.Config, r *rule.Rule, f *rule.File) []resolve.ImportSpec {
 	var imports []resolve.ImportSpec
@@ -149,6 +163,13 @@ func (lang *ccLanguage) Resolve(c *config.Config, ix *resolve.RuleIndex, rc *rep
 
 	publicDeps := newPlatformDepsBuilder()
 	privateDeps := newPlatformDepsBuilder()
+
+	// Every embeded target is always treated as public shared dependency
+	if embededHdrTargets, ok := r.PrivateAttr(embededHeaderDependenciesKey).([]label.Label); ok {
+		for _, embededTarget := range embededHdrTargets {
+			publicDeps.addGeneric(embededTarget)
+		}
+	}
 
 	// Resolves given includes to rule labels and assigns them to given attribute.
 	// Excludes explicitly provided labels from being assigned

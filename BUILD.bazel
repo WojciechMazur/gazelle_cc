@@ -29,5 +29,14 @@ gazelle_binary(
     visibility = ["//visibility:public"],
 )
 
+gazelle_binary(
+    name = "gazelle_filegroup",
+    languages = [
+        "//language/filegroup",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
 gazelle(name = "gazelle")
 # gazelle:exclude example

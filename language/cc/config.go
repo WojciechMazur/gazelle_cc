@@ -55,6 +55,7 @@ const (
 	cc_platform                   = "cc_platform"
 	cc_include_prefix             = "cc_include_prefix"
 	cc_strip_include_prefix       = "cc_strip_include_prefix"
+	cc_flat_namespace             = "cc_flat_namespace"
 )
 
 func (c *ccLanguage) KnownDirectives() []string {
@@ -75,6 +76,7 @@ func (c *ccLanguage) KnownDirectives() []string {
 		cc_platform,
 		cc_include_prefix,
 		cc_strip_include_prefix,
+		cc_flat_namespace,
 	}
 }
 
@@ -214,6 +216,8 @@ func (c *ccLanguage) Configure(config *config.Config, rel string, f *rule.File) 
 			conf.ccIncludePrefix = d.Value
 		case cc_strip_include_prefix:
 			conf.ccStripIncludePrefix = d.Value
+		case cc_flat_namespace:
+			parseBoolDirective(&conf.ccFlatNamespace, d)
 		}
 	}
 }
@@ -285,6 +289,8 @@ type ccConfig struct {
 	ccIncludePrefix string
 	// Value of "strip_include_prefix" attribute set in generated cc_library rules
 	ccStripIncludePrefix string
+	// Whether to set includes = ["."] for all generated cc_library rules
+	ccFlatNamespace bool
 	// Glob patterns for subdirectories whose contents should be added to srcs (used in subdirectory mode)
 	groupSubdirectorySrcPatterns []string
 	// Glob patterns for subdirectories whose headers should be added to hdrs (used in subdirectory mode)
@@ -437,6 +443,7 @@ var ambiguousDepsModes = []ambiguousDepsMode{
 	ambiguousDepsMode_warn,
 	ambiguousDepsMode_try_first,
 	ambiguousDepsMode_force_first,
+	ambiguousDepsMode_most_matching,
 }
 
 const (
@@ -448,6 +455,8 @@ const (
 	ambiguousDepsMode_try_first ambiguousDepsMode = "try_first"
 	// Always resolve the first dependency from the list
 	ambiguousDepsMode_force_first ambiguousDepsMode = "force_first"
+	// Resolve to the dependency with the longest common package path prefix
+	ambiguousDepsMode_most_matching ambiguousDepsMode = "most_matching"
 )
 
 // splitQuoted splits the string s around each instance of one or more consecutive

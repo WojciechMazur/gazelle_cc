@@ -118,7 +118,7 @@ When resolving dependencies, indexes are visited in the same order as the corres
 
 The argument must be a repository-root relative path.
 
-### `# gazelle:cc_ambiguous_deps [ignore|warn|try_first|force_first]`
+### `# gazelle:cc_ambiguous_deps [ignore|warn|try_first|force_first|most_matching]`
 
 Defines how to handle ambiguous dependencies. An ambiguity occurs when a single header is associated with more than one C++ Bazel rule, and Gazelle needs to know which one to put in "deps".
 
@@ -126,6 +126,7 @@ Defines how to handle ambiguous dependencies. An ambiguity occurs when a single 
 - `warn`: Emit warnings for ambiguous dependencies; do not modify rules
 - `try_first`: Emit warnings for ambiguous dependencies, use the first target from the ambiguous list as the rule dependency; but only if ambiguities come within a single repo **(default)**
 - `force_first`: Emit warnings for ambiguous dependencies; always use the first target from the ambiguous list as the rule dependency
+- `most_matching`: Emit warnings for ambiguous dependencies; use the target with the longest common package path prefix with the source file's package. This is useful when multiple libraries provide the same header in different packages, and you want to prefer the one from the most similar package path.
 
 ### `# gazelle:cc_search <strip_include_prefix> <include_prefix>`
 
@@ -225,6 +226,11 @@ Explicitly sets the value of `"include_prefix"` attribute for generated `cc_libr
 ### `# gazelle:cc_strip_include_prefix <value>`
 
 Explicitly sets the value of `"strip_include_prefix"` attribute for generated `cc_library` rules.
+
+### `# gazelle:cc_flat_namespace [true|false]`
+
+When set to `true`, adds `includes = ["."]` to all generated `cc_library` rules (default: `false`).
+This makes the current directory available as an include path for all `cc_library` targets.
 
 ## Rules for target rule selection
 

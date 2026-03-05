@@ -1,0 +1,9 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+# gazelle:cc_ambiguous_deps most_matching
+
+cc_test(
+    name = "test",
+    srcs = ["testConfigs.c"],
+    deps = ["//other/variant_b/main_app/lib_config:config"],
+)

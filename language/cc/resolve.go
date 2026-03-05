@@ -20,6 +20,7 @@ import (
 	"log"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/EngFlow/gazelle_cc/internal/collections"
 	"github.com/bazelbuild/bazel-gazelle/config"
@@ -213,6 +214,103 @@ func containsMultipleRepos(labels []label.Label) bool {
 	return false
 }
 
+// findMostMatchingLabel finds the label with the longest common package path
+// prefix with the source label. If there's a tie, it prefers:
+// 1. Exact package match (same package)
+// 2. Shorter path (more specific)
+func findMostMatchingLabel(from label.Label, candidates []label.Label) label.Label {
+	if len(candidates) == 0 {
+		return label.NoLabel
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+
+	fromPath := from.Pkg
+	bestLabel := candidates[0]
+	bestCommonPrefix := commonPrefixLength(fromPath, bestLabel.Pkg)
+	bestIsExactMatch := fromPath == bestLabel.Pkg
+
+	for _, candidate := range candidates[1:] {
+		candidatePath := candidate.Pkg
+		commonPrefix := commonPrefixLength(fromPath, candidatePath)
+		isExactMatch := fromPath == candidatePath
+
+		// Prefer longer common prefix
+		if commonPrefix > bestCommonPrefix {
+			bestLabel = candidate
+			bestCommonPrefix = commonPrefix
+			bestIsExactMatch = isExactMatch
+			continue
+		}
+
+		// If same prefix length, prefer exact match
+		if commonPrefix == bestCommonPrefix {
+			if isExactMatch && !bestIsExactMatch {
+				bestLabel = candidate
+				bestIsExactMatch = true
+				continue
+			}
+			// If both or neither are exact matches, prefer shorter path (more specific)
+			if isExactMatch == bestIsExactMatch {
+				if len(candidatePath) < len(bestLabel.Pkg) {
+					bestLabel = candidate
+				}
+			}
+		}
+	}
+
+	return bestLabel
+}
+
+// commonPrefixLength returns the length of the common prefix between two
+// package paths, measured in path components.
+func commonPrefixLength(path1, path2 string) int {
+	if path1 == "" && path2 == "" {
+		return 0
+	}
+	if path1 == "" || path2 == "" {
+		return 0
+	}
+
+	components1 := pathComponents(path1)
+	components2 := pathComponents(path2)
+
+	minLen := len(components1)
+	if len(components2) < minLen {
+		minLen = len(components2)
+	}
+
+	for i := 0; i < minLen; i++ {
+		if components1[i] != components2[i] {
+			return i
+		}
+	}
+
+	return minLen
+}
+
+// pathComponents splits a package path into its components.
+func pathComponents(pkgPath string) []string {
+	if pkgPath == "" {
+		return []string{}
+	}
+	// Normalize the path and split by "/"
+	cleanPath := path.Clean(pkgPath)
+	if cleanPath == "." {
+		return []string{}
+	}
+	// Split by "/" and filter out empty strings
+	parts := strings.Split(cleanPath, "/")
+	components := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" && part != "." {
+			components = append(components, part)
+		}
+	}
+	return components
+}
+
 func resolveAmbiguousDependency(
 	resolvedDeps []label.Label,
 	mode ambiguousDepsMode,
@@ -244,6 +342,9 @@ func resolveAmbiguousDependency(
 			fallthrough
 		case ambiguousDepsMode_warn:
 			return label.NoLabel, fmt.Errorf("%v: %w - %v resolved to %v; don't know which one to use", from, errAmbiguousImport, include, resolvedDeps)
+		case ambiguousDepsMode_most_matching:
+			selected := findMostMatchingLabel(from, resolvedDeps)
+			return selected, fmt.Errorf("%v: %w - %v resolved to %v; using %v", from, errAmbiguousImport, include, resolvedDeps, selected)
 		default:
 			// Silently ignore the ambiguous dependency.
 			return label.NoLabel, nil

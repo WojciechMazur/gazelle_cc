@@ -238,6 +238,9 @@ func (c *ccLanguage) generateLibraryRules(args language.GenerateArgs, fileInfos 
 		if conf.ccStripIncludePrefix != "" {
 			newRule.SetAttr("strip_include_prefix", conf.ccStripIncludePrefix)
 		}
+		if conf.ccFlatNamespace {
+			newRule.SetAttr("includes", []string{"."})
+		}
 
 		result.Gen = append(result.Gen, newRule)
 		result.Imports = append(result.Imports, extractImports(args.Rel, group.sources))
@@ -348,6 +351,9 @@ func (c *ccLanguage) generateTestRules(args language.GenerateArgs, fileInfos []f
 		}
 		if len(srcs) > 0 {
 			newRule.SetAttr("srcs", srcs)
+		}
+		if conf.ccFlatNamespace {
+			newRule.SetAttr("includes", []string{"."})
 		}
 		result.Gen = append(result.Gen, newRule)
 		result.Imports = append(result.Imports, extractImports(args.Rel, group.sources))
